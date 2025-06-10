@@ -39,6 +39,37 @@
             background-clip: text;
         }
 
+        .input-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .number-input {
+            width: 200px;
+            padding: 15px;
+            font-size: 18px;
+            border: 2px solid #667eea;
+            border-radius: 25px;
+            text-align: center;
+            margin: 10px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .number-input:focus {
+            border-color: #764ba2;
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .input-label {
+            display: block;
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
         .camera-section {
             text-align: center;
             margin-bottom: 40px;
@@ -147,6 +178,18 @@
             display: block;
         }
 
+        .photo-label {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            color: white;
+            padding: 15px 10px 10px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
         .delete-btn {
             position: absolute;
             top: 10px;
@@ -239,12 +282,21 @@
             .btn {
                 width: 200px;
             }
+
+            .number-input {
+                width: 180px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>İnek Burnu Fotoğraflama Uygulaması</h1>
+        
+        <div class="input-section">
+            <label class="input-label" for="animalNumber">İnek Numarası:</label>
+            <input type="number" id="animalNumber" class="number-input" placeholder="Numara girin" min="1">
+        </div>
         
         <div class="camera-section">
             <video id="video" autoplay muted playsinline></video>
@@ -297,6 +349,7 @@
                 this.photoCount = document.getElementById('photoCount');
                 this.flashEffect = document.getElementById('flashEffect');
                 this.successMessage = document.getElementById('successMessage');
+                this.animalNumberInput = document.getElementById('animalNumber');
             }
 
             attachEventListeners() {
@@ -312,7 +365,7 @@
                         video: { 
                             width: { ideal: 1280 },
                             height: { ideal: 720 },
-                            facingMode: 'user'
+                            facingMode: 'environment' // Arka kamera
                         },
                         audio: false
                     });
@@ -335,12 +388,17 @@
                     return;
                 }
 
+                const animalNumber = this.animalNumberInput.value || 'Numara Yok';
+
                 // Canvas boyutlarını video boyutlarına göre ayarla
                 this.canvas.width = this.video.videoWidth;
                 this.canvas.height = this.video.videoHeight;
 
                 // Fotoğrafı çek
                 this.ctx.drawImage(this.video, 0, 0);
+                
+                // Numara yazısını fotoğrafın üzerine ekle
+                this.addNumberToPhoto(animalNumber);
                 
                 // Flash efekti
                 this.showFlash();
@@ -352,6 +410,7 @@
                 this.photos.push({
                     id: Date.now(),
                     data: imageData,
+                    number: animalNumber,
                     timestamp: new Date().toLocaleString('tr-TR')
                 });
                 
@@ -359,6 +418,38 @@
                 this.updateUI();
                 
                 this.showSuccess(`Fotoğraf çekildi! (${this.photos.length}/${this.maxPhotos})`);
+            }
+
+            addNumberToPhoto(number) {
+                // Metin özellikleri
+                const fontSize = this.canvas.width * 0.08; // Canvas genişliğine göre boyut
+                this.ctx.font = `bold ${fontSize}px Arial`;
+                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+                this.ctx.lineWidth = fontSize * 0.1;
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+
+                // Metin konumu (sağ üst köşe)
+                const x = this.canvas.width - (this.canvas.width * 0.15);
+                const y = this.canvas.height * 0.15;
+
+                // Arkaplan dikdörtgeni
+                const textWidth = this.ctx.measureText(`#${number}`).width;
+                const padding = fontSize * 0.3;
+                
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                this.ctx.fillRect(
+                    x - textWidth/2 - padding,
+                    y - fontSize/2 - padding,
+                    textWidth + padding * 2,
+                    fontSize + padding * 2
+                );
+
+                // Metin
+                this.ctx.fillStyle = 'white';
+                this.ctx.strokeText(`#${number}`, x, y);
+                this.ctx.fillText(`#${number}`, x, y);
             }
 
             updatePhotosDisplay() {
@@ -370,6 +461,7 @@
                     
                     photoItem.innerHTML = `
                         <img src="${photo.data}" alt="Fotoğraf ${index + 1}">
+                        <div class="photo-label">#${photo.number} - ${photo.timestamp}</div>
                         <button class="delete-btn" onclick="app.deletePhoto(${photo.id})" title="Fotoğrafı Sil">
                             ✕
                         </button>
@@ -425,12 +517,13 @@
 
                 try {
                     const zip = new JSZip();
-                    const folder = zip.folder('Çekilen_Fotoğraflar');
+                    const folder = zip.folder('Inek_Burun_Fotograflari');
                     
                     this.photos.forEach((photo, index) => {
                         // Base64 verisini temizle
                         const base64Data = photo.data.replace(/^data:image\/jpeg;base64,/, '');
-                        folder.file(`fotograf_${index + 1}.jpg`, base64Data, { base64: true });
+                        const fileName = `${photo.number}_fotograf_${index + 1}.jpg`;
+                        folder.file(fileName, base64Data, { base64: true });
                     });
                     
                     // Zip dosyasını oluştur
@@ -440,7 +533,7 @@
                     const link = document.createElement('a');
                     const url = URL.createObjectURL(content);
                     link.href = url;
-                    link.download = `Fotograf_Koleksiyonu_${new Date().toISOString().slice(0, 10)}.zip`;
+                    link.download = `Inek_Burun_Fotograflari_${new Date().toISOString().slice(0, 10)}.zip`;
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
@@ -468,6 +561,7 @@
                 this.video.srcObject = null;
                 this.photosGrid.innerHTML = '';
                 this.photoCount.textContent = '0';
+                this.animalNumberInput.value = '';
                 
                 // Butonları sıfırla
                 this.startCameraBtn.disabled = false;
