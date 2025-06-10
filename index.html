@@ -265,6 +265,112 @@
             transform: translateY(0);
         }
 
+        /* Modal Stilleri */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            animation: modalFadeIn 0.3s ease-out;
+        }
+
+        .modal.show {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            position: relative;
+            max-width: 90%;
+            max-height: 90%;
+            margin: auto;
+            display: block;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        .modal-image {
+            width: 100%;
+            height: auto;
+            max-width: 90vw;
+            max-height: 80vh;
+            object-fit: contain;
+            border-radius: 15px;
+        }
+
+        .modal-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+            color: white;
+            padding: 20px;
+            border-radius: 0 0 15px 15px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 25px;
+            color: white;
+            font-size: 35px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 10001;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .close-modal:hover {
+            background: rgba(255, 0, 0, 0.7);
+            transform: scale(1.1);
+        }
+
+        .photo-item img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            display: block;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .photo-item img:hover {
+            transform: scale(1.05);
+            filter: brightness(1.1);
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes modalSlideIn {
+            from { 
+                opacity: 0;
+                transform: scale(0.8) translateY(-50px);
+            }
+            to { 
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 20px;
@@ -285,6 +391,29 @@
 
             .number-input {
                 width: 180px;
+            }
+
+            .modal-content {
+                max-width: 95%;
+                max-height: 85%;
+            }
+
+            .modal-image {
+                max-width: 95vw;
+                max-height: 75vh;
+            }
+
+            .close-modal {
+                top: 10px;
+                right: 15px;
+                font-size: 25px;
+                width: 40px;
+                height: 40px;
+            }
+
+            .modal-info {
+                font-size: 16px;
+                padding: 15px;
             }
         }
     </style>
@@ -324,6 +453,15 @@
 
     <canvas id="canvas" style="display: none;"></canvas>
     <div id="flashEffect" class="flash-effect"></div>
+    
+    <!-- Modal -->
+    <div id="photoModal" class="modal">
+        <span class="close-modal" onclick="app.closeModal()">&times;</span>
+        <div class="modal-content">
+            <img id="modalImage" class="modal-image" src="" alt="">
+            <div id="modalInfo" class="modal-info"></div>
+        </div>
+    </div>
 
     <script>
         class PhotoCaptureApp {
@@ -350,6 +488,11 @@
                 this.flashEffect = document.getElementById('flashEffect');
                 this.successMessage = document.getElementById('successMessage');
                 this.animalNumberInput = document.getElementById('animalNumber');
+                
+                // Modal elementleri
+                this.photoModal = document.getElementById('photoModal');
+                this.modalImage = document.getElementById('modalImage');
+                this.modalInfo = document.getElementById('modalInfo');
             }
 
             attachEventListeners() {
@@ -357,6 +500,20 @@
                 this.captureBtn.addEventListener('click', () => this.capturePhoto());
                 this.resetBtn.addEventListener('click', () => this.resetApp());
                 this.downloadBtn.addEventListener('click', () => this.downloadPhotos());
+                
+                // Modal event listeners
+                this.photoModal.addEventListener('click', (e) => {
+                    if (e.target === this.photoModal) {
+                        this.closeModal();
+                    }
+                });
+                
+                // Escape tuşu ile modal kapatma
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && this.photoModal.classList.contains('show')) {
+                        this.closeModal();
+                    }
+                });
             }
 
             async startCamera() {
@@ -460,7 +617,7 @@
                     photoItem.className = 'photo-item';
                     
                     photoItem.innerHTML = `
-                        <img src="${photo.data}" alt="Fotoğraf ${index + 1}">
+                        <img src="${photo.data}" alt="Fotoğraf ${index + 1}" onclick="app.openModal('${photo.data}', '${photo.number}', '${photo.timestamp}', ${index + 1})" title="Detayını görmek için tıklayın">
                         <div class="photo-label">#${photo.number} - ${photo.timestamp}</div>
                         <button class="delete-btn" onclick="app.deletePhoto(${photo.id})" title="Fotoğrafı Sil">
                             ✕
@@ -508,6 +665,22 @@
                 setTimeout(() => {
                     this.successMessage.classList.remove('show');
                 }, 3000);
+            }
+
+            openModal(imageSrc, number, timestamp, photoIndex) {
+                this.modalImage.src = imageSrc;
+                this.modalInfo.innerHTML = `
+                    <div>Fotoğraf #${photoIndex}</div>
+                    <div>İnek Numarası: #${number}</div>
+                    <div>Tarih: ${timestamp}</div>
+                `;
+                this.photoModal.classList.add('show');
+                document.body.style.overflow = 'hidden'; // Arka planın kaymasını engelle
+            }
+
+            closeModal() {
+                this.photoModal.classList.remove('show');
+                document.body.style.overflow = 'auto'; // Scroll'u geri aç
             }
 
             async downloadPhotos() {
