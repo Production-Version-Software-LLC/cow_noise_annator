@@ -676,11 +676,9 @@
                     const photoItem = document.createElement('div');
                     photoItem.className = 'photo-item';
                     
-                    const methodIcon = photo.method === 'ImageCapture' ? '✨' : '📷';
-                    
                     photoItem.innerHTML = `
                         <img src="${photo.data}" alt="Fotoğraf ${index + 1}" onclick="app.openModal('${photo.data}', '${photo.number}', '${photo.timestamp}', ${index + 1}, '${photo.method}')" title="Detayını görmek için tıklayın">
-                        <div class="photo-label">${methodIcon} #${photo.number} - ${photo.timestamp}</div>
+                        <div class="photo-label">İnek Numarası: ${photo.number}</div>
                         <button class="delete-btn" onclick="app.deletePhoto(${photo.id})" title="Fotoğrafı Sil">
                             ✕
                         </button>
