@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>İnek Burnu Fotoğraf Uygulaması</title>
+    <title>Fotoğraf Çekme Uygulaması</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -12,97 +13,62 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Arial', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
             padding: 20px;
         }
 
-        .header {
-            text-align: center;
-            color: white;
-            margin-bottom: 30px;
-        }
-
-        .header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }
-
         .container {
+            max-width: 1200px;
+            margin: 0 auto;
             background: white;
             border-radius: 20px;
             padding: 30px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-            max-width: 800px;
-            width: 100%;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
         }
 
-        .number-input {
+        h1 {
             text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .number-input label {
-            display: block;
-            font-size: 1.2rem;
             color: #333;
-            margin-bottom: 10px;
-            font-weight: 600;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
-        .number-input input {
-            font-size: 2rem;
-            padding: 15px;
-            border: 3px solid #667eea;
-            border-radius: 10px;
+        .camera-section {
             text-align: center;
-            width: 200px;
-            font-weight: bold;
-            color: #667eea;
+            margin-bottom: 40px;
         }
 
-        .number-input input:focus {
-            outline: none;
-            border-color: #764ba2;
-            box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
-        }
-
-        .camera-container {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        #videoElement {
+        #video {
             width: 100%;
-            max-width: 600px;
+            max-width: 500px;
+            height: 375px;
             border-radius: 15px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            object-fit: cover;
+            background: #f0f0f0;
         }
 
-        #canvas {
-            display: none;
-        }
-
-        .controls {
+        .camera-controls {
+            margin-top: 20px;
             display: flex;
-            gap: 15px;
             justify-content: center;
+            gap: 15px;
             flex-wrap: wrap;
-            margin-bottom: 20px;
         }
 
-        button {
-            padding: 15px 30px;
-            font-size: 1.1rem;
+        .btn {
+            padding: 12px 25px;
             border: none;
-            border-radius: 50px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
             cursor: pointer;
-            font-weight: 600;
             transition: all 0.3s ease;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -111,280 +77,410 @@
         .btn-primary {
             background: linear-gradient(45deg, #667eea, #764ba2);
             color: white;
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
         }
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
-        }
-
-        .btn-secondary {
-            background: linear-gradient(45deg, #ffeaa7, #fdcb6e);
-            color: #333;
-            box-shadow: 0 5px 15px rgba(253, 203, 110, 0.4);
-        }
-
-        .btn-secondary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(253, 203, 110, 0.6);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
         }
 
         .btn-success {
-            background: linear-gradient(45deg, #00b894, #00cec9);
+            background: linear-gradient(45deg, #56ab2f, #a8e6cf);
             color: white;
-            box-shadow: 0 5px 15px rgba(0, 184, 148, 0.4);
         }
 
         .btn-success:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 184, 148, 0.6);
+            box-shadow: 0 10px 20px rgba(86, 171, 47, 0.3);
         }
 
-        .status {
+        .btn-warning {
+            background: linear-gradient(45deg, #f093fb, #f5576c);
+            color: white;
+        }
+
+        .btn-warning:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(240, 147, 251, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .photos-section {
+            margin-top: 40px;
+        }
+
+        .photos-title {
             text-align: center;
-            margin-top: 20px;
-            font-size: 1.1rem;
-            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.8em;
         }
 
-        .success {
-            color: #00b894;
+        .photos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
         }
 
-        .error {
-            color: #e17055;
-        }
-
-        .preview-container {
-            margin-top: 30px;
-            text-align: center;
-        }
-
-        .preview-image {
-            max-width: 100%;
-            max-height: 400px;
+        .photo-item {
+            position: relative;
             border-radius: 15px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            margin: 20px 0;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .photo-item:hover {
+            transform: translateY(-5px);
+        }
+
+        .photo-item img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 59, 59, 0.9);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .delete-btn:hover {
+            background: #ff3b3b;
+            transform: scale(1.1);
         }
 
         .photo-count {
-            background: linear-gradient(45deg, #fd79a8, #fdcb6e);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 25px;
-            font-weight: bold;
-            display: inline-block;
-            margin-top: 10px;
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 1.2em;
         }
 
-        @media (max-width: 600px) {
+        .download-section {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .flash-effect {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        .flash-effect.active {
+            animation: flash 0.3s ease-out;
+        }
+
+        @keyframes flash {
+            0% { opacity: 0; }
+            50% { opacity: 0.8; }
+            100% { opacity: 0; }
+        }
+
+        .success-message {
+            background: linear-gradient(45deg, #56ab2f, #a8e6cf);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+            font-weight: bold;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s ease;
+        }
+
+        .success-message.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @media (max-width: 768px) {
             .container {
                 padding: 20px;
             }
             
-            .header h1 {
-                font-size: 2rem;
+            h1 {
+                font-size: 2em;
             }
             
-            .number-input input {
-                width: 150px;
-                font-size: 1.5rem;
+            .camera-controls {
+                flex-direction: column;
+                align-items: center;
             }
             
-            button {
-                padding: 12px 20px;
-                font-size: 1rem;
+            .btn {
+                width: 200px;
             }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>🐄 İnek Burnu Fotoğraf Uygulaması</h1>
-        <p>Tarih: <span id="currentDate"></span></p>
-    </div>
-
     <div class="container">
-        <div class="number-input">
-            <label for="animalNumber">İnek Numarası:</label>
-            <input type="number" id="animalNumber" value="45" placeholder="Numara girin">
-        </div>
-
-        <div class="camera-container">
-            <video id="videoElement" autoplay playsinline></video>
-            <canvas id="canvas"></canvas>
-        </div>
-
-        <div class="controls">
-            <button id="startCamera" class="btn-primary">📷 Kamerayı Başlat</button>
-            <button id="capturePhoto" class="btn-success" disabled>📸 Fotoğraf Çek</button>
-            <button id="downloadPhoto" class="btn-secondary" style="display: none;">💾 İndir</button>
-        </div>
-
-        <div id="status" class="status"></div>
-
-        <div class="preview-container">
-            <img id="preview" class="preview-image" style="display: none;">
-            <div class="photo-count">
-                Çekilen Fotoğraf: <span id="photoCount">0</span>
+        <h1>İnek Burnu Fotoğraflama Uygulaması</h1>
+        
+        <div class="camera-section">
+            <video id="video" autoplay muted playsinline></video>
+            <div class="camera-controls">
+                <button id="startCamera" class="btn btn-primary">📷 Kamerayı Başlat</button>
+                <button id="captureBtn" class="btn btn-success" disabled>📸 Fotoğraf Çek</button>
+                <button id="resetBtn" class="btn btn-warning">🔄 Sıfırla</button>
             </div>
         </div>
+
+        <div class="photos-section">
+            <h2 class="photos-title">Çekilen Fotoğraflar</h2>
+            <div class="photo-count">
+                <span id="photoCount">0</span> / 6 fotoğraf çekildi
+            </div>
+            <div id="photosGrid" class="photos-grid"></div>
+            
+            <div class="download-section">
+                <button id="downloadBtn" class="btn btn-primary" disabled>📁 Tüm Fotoğrafları İndir</button>
+            </div>
+        </div>
+
+        <div id="successMessage" class="success-message"></div>
     </div>
 
+    <canvas id="canvas" style="display: none;"></canvas>
+    <div id="flashEffect" class="flash-effect"></div>
+
     <script>
-        let stream = null;
-        let photoCount = 0;
-        let currentPhotoBlob = null;
+        class PhotoCaptureApp {
+            constructor() {
+                this.photos = [];
+                this.maxPhotos = 6;
+                this.stream = null;
+                this.isRecording = false;
+                
+                this.initElements();
+                this.attachEventListeners();
+            }
 
-        const videoElement = document.getElementById('videoElement');
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        const startCameraBtn = document.getElementById('startCamera');
-        const capturePhotoBtn = document.getElementById('capturePhoto');
-        const downloadPhotoBtn = document.getElementById('downloadPhoto');
-        const animalNumberInput = document.getElementById('animalNumber');
-        const statusDiv = document.getElementById('status');
-        const previewImg = document.getElementById('preview');
-        const photoCountSpan = document.getElementById('photoCount');
+            initElements() {
+                this.video = document.getElementById('video');
+                this.canvas = document.getElementById('canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.startCameraBtn = document.getElementById('startCamera');
+                this.captureBtn = document.getElementById('captureBtn');
+                this.resetBtn = document.getElementById('resetBtn');
+                this.downloadBtn = document.getElementById('downloadBtn');
+                this.photosGrid = document.getElementById('photosGrid');
+                this.photoCount = document.getElementById('photoCount');
+                this.flashEffect = document.getElementById('flashEffect');
+                this.successMessage = document.getElementById('successMessage');
+            }
 
-        // Mevcut tarihi göster
-        document.getElementById('currentDate').textContent = new Date().toLocaleDateString('tr-TR');
+            attachEventListeners() {
+                this.startCameraBtn.addEventListener('click', () => this.startCamera());
+                this.captureBtn.addEventListener('click', () => this.capturePhoto());
+                this.resetBtn.addEventListener('click', () => this.resetApp());
+                this.downloadBtn.addEventListener('click', () => this.downloadPhotos());
+            }
 
-        startCameraBtn.addEventListener('click', startCamera);
-        capturePhotoBtn.addEventListener('click', capturePhoto);
-        downloadPhotoBtn.addEventListener('click', downloadPhoto);
+            async startCamera() {
+                try {
+                    this.stream = await navigator.mediaDevices.getUserMedia({
+                        video: { 
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 },
+                            facingMode: 'user'
+                        },
+                        audio: false
+                    });
+                    
+                    this.video.srcObject = this.stream;
+                    this.isRecording = true;
+                    
+                    this.startCameraBtn.disabled = true;
+                    this.captureBtn.disabled = false;
+                    
+                    this.showSuccess('Kamera başlatıldı! Fotoğraf çekmeye hazırsınız.');
+                } catch (error) {
+                    console.error('Kamera erişim hatası:', error);
+                    alert('Kameraya erişilemiyor. Lütfen tarayıcı izinlerini kontrol edin.');
+                }
+            }
 
-        async function startCamera() {
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { 
-                        facingMode: 'environment',
-                        width: { ideal: 1920 },
-                        height: { ideal: 1080 }
-                    } 
+            capturePhoto() {
+                if (!this.isRecording || this.photos.length >= this.maxPhotos) {
+                    return;
+                }
+
+                // Canvas boyutlarını video boyutlarına göre ayarla
+                this.canvas.width = this.video.videoWidth;
+                this.canvas.height = this.video.videoHeight;
+
+                // Fotoğrafı çek
+                this.ctx.drawImage(this.video, 0, 0);
+                
+                // Flash efekti
+                this.showFlash();
+                
+                // Base64 formatında resmi al
+                const imageData = this.canvas.toDataURL('image/jpeg', 0.9);
+                
+                // Fotoğrafı listeye ekle
+                this.photos.push({
+                    id: Date.now(),
+                    data: imageData,
+                    timestamp: new Date().toLocaleString('tr-TR')
                 });
-                videoElement.srcObject = stream;
-                startCameraBtn.disabled = true;
-                capturePhotoBtn.disabled = false;
-                showStatus('Kamera başlatıldı! Fotoğraf çekmeye hazır.', 'success');
-            } catch (err) {
-                showStatus('Kamera erişim hatası: ' + err.message, 'error');
-                console.error('Kamera hatası:', err);
-            }
-        }
-
-        function capturePhoto() {
-            const animalNumber = animalNumberInput.value.trim();
-            
-            if (!animalNumber) {
-                showStatus('Lütfen bir inek numarası girin!', 'error');
-                return;
-            }
-
-            // Canvas boyutlarını video boyutlarına ayarla
-            canvas.width = videoElement.videoWidth;
-            canvas.height = videoElement.videoHeight;
-
-            // Video görüntüsünü canvas'a çiz
-            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-
-            // Sol üst köşeye numara ekle
-            addNumberOverlay(animalNumber);
-
-            // Canvas'ı blob'a çevir
-            canvas.toBlob((blob) => {
-                currentPhotoBlob = blob;
                 
-                // Önizleme göster
-                const url = URL.createObjectURL(blob);
-                previewImg.src = url;
-                previewImg.style.display = 'block';
-                downloadPhotoBtn.style.display = 'inline-block';
+                this.updatePhotosDisplay();
+                this.updateUI();
                 
-                // Fotoğraf sayısını artır
-                photoCount++;
-                photoCountSpan.textContent = photoCount;
-                
-                showStatus(`Fotoğraf çekildi! (Numara: ${animalNumber})`, 'success');
-            }, 'image/jpeg', 0.9);
-        }
-
-        function addNumberOverlay(number) {
-            // Font ayarları
-            const fontSize = Math.max(50, canvas.width / 20);
-            ctx.font = `bold ${fontSize}px Arial`;
-            ctx.fillStyle = 'white';
-            ctx.strokeStyle = 'black';
-            ctx.lineWidth = 4;
-            
-            // Pozisyon ayarları (sol üst köşe)
-            const x = 30;
-            const y = fontSize + 20;
-            
-            // Metin çerçevesi için arka plan
-            const textMetrics = ctx.measureText(number);
-            const textWidth = textMetrics.width;
-            const textHeight = fontSize;
-            
-            // Arka plan çiz (yarı saydam)
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            ctx.fillRect(x - 15, y - textHeight - 5, textWidth + 30, textHeight + 20);
-            
-            // Metin kenarlığı çiz
-            ctx.strokeText(number, x, y);
-            
-            // Ana metni çiz
-            ctx.fillStyle = 'white';
-            ctx.fillText(number, x, y);
-        }
-
-        function downloadPhoto() {
-            if (!currentPhotoBlob) {
-                showStatus('İndirilecek fotoğraf bulunamadı!', 'error');
-                return;
+                this.showSuccess(`Fotoğraf çekildi! (${this.photos.length}/${this.maxPhotos})`);
             }
 
-            const animalNumber = animalNumberInput.value.trim();
-            const now = new Date();
-            const timestamp = now.toISOString().slice(0, 19).replace(/:/g, '-');
-            const filename = `inek_burun_${animalNumber}_${timestamp}.jpg`;
-
-            const url = URL.createObjectURL(currentPhotoBlob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-
-            showStatus(`Fotoğraf indirildi: ${filename}`, 'success');
-        }
-
-        function showStatus(message, type) {
-            statusDiv.textContent = message;
-            statusDiv.className = `status ${type}`;
-            
-            // 3 saniye sonra mesajı temizle
-            setTimeout(() => {
-                statusDiv.textContent = '';
-                statusDiv.className = 'status';
-            }, 3000);
-        }
-
-        // Sayfa yüklendiğinde inek numarasına odaklan
-        window.addEventListener('load', () => {
-            animalNumberInput.focus();
-        });
-
-        // Enter tuşu ile fotoğraf çekme
-        animalNumberInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !capturePhotoBtn.disabled) {
-                capturePhoto();
+            updatePhotosDisplay() {
+                this.photosGrid.innerHTML = '';
+                
+                this.photos.forEach((photo, index) => {
+                    const photoItem = document.createElement('div');
+                    photoItem.className = 'photo-item';
+                    
+                    photoItem.innerHTML = `
+                        <img src="${photo.data}" alt="Fotoğraf ${index + 1}">
+                        <button class="delete-btn" onclick="app.deletePhoto(${photo.id})" title="Fotoğrafı Sil">
+                            ✕
+                        </button>
+                    `;
+                    
+                    this.photosGrid.appendChild(photoItem);
+                });
             }
-        });
+
+            deletePhoto(photoId) {
+                this.photos = this.photos.filter(photo => photo.id !== photoId);
+                this.updatePhotosDisplay();
+                this.updateUI();
+                this.showSuccess('Fotoğraf silindi!');
+            }
+
+            updateUI() {
+                this.photoCount.textContent = this.photos.length;
+                
+                // Fotoğraf çekme butonu kontrolü
+                if (this.photos.length >= this.maxPhotos) {
+                    this.captureBtn.disabled = true;
+                    this.captureBtn.textContent = '📸 Maksimum Fotoğraf Sayısına Ulaşıldı';
+                } else {
+                    this.captureBtn.disabled = !this.isRecording;
+                    this.captureBtn.textContent = '📸 Fotoğraf Çek';
+                }
+                
+                // İndirme butonu kontrolü
+                this.downloadBtn.disabled = this.photos.length === 0;
+            }
+
+            showFlash() {
+                this.flashEffect.classList.add('active');
+                setTimeout(() => {
+                    this.flashEffect.classList.remove('active');
+                }, 300);
+            }
+
+            showSuccess(message) {
+                this.successMessage.textContent = message;
+                this.successMessage.classList.add('show');
+                
+                setTimeout(() => {
+                    this.successMessage.classList.remove('show');
+                }, 3000);
+            }
+
+            async downloadPhotos() {
+                if (this.photos.length === 0) {
+                    return;
+                }
+
+                try {
+                    const zip = new JSZip();
+                    const folder = zip.folder('Çekilen_Fotoğraflar');
+                    
+                    this.photos.forEach((photo, index) => {
+                        // Base64 verisini temizle
+                        const base64Data = photo.data.replace(/^data:image\/jpeg;base64,/, '');
+                        folder.file(`fotograf_${index + 1}.jpg`, base64Data, { base64: true });
+                    });
+                    
+                    // Zip dosyasını oluştur
+                    const content = await zip.generateAsync({ type: 'blob' });
+                    
+                    // İndirme işlemi
+                    const link = document.createElement('a');
+                    const url = URL.createObjectURL(content);
+                    link.href = url;
+                    link.download = `Fotograf_Koleksiyonu_${new Date().toISOString().slice(0, 10)}.zip`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                    
+                    this.showSuccess('Fotoğraflar başarıyla indirildi!');
+                } catch (error) {
+                    console.error('İndirme hatası:', error);
+                    alert('Fotoğraflar indirilemedi. Lütfen tekrar deneyin.');
+                }
+            }
+
+            resetApp() {
+                // Kamerayı durdur
+                if (this.stream) {
+                    this.stream.getTracks().forEach(track => track.stop());
+                    this.stream = null;
+                }
+                
+                // Değişkenleri sıfırla
+                this.photos = [];
+                this.isRecording = false;
+                
+                // UI'ı sıfırla
+                this.video.srcObject = null;
+                this.photosGrid.innerHTML = '';
+                this.photoCount.textContent = '0';
+                
+                // Butonları sıfırla
+                this.startCameraBtn.disabled = false;
+                this.captureBtn.disabled = true;
+                this.captureBtn.textContent = '📸 Fotoğraf Çek';
+                this.downloadBtn.disabled = true;
+                
+                this.showSuccess('Uygulama sıfırlandı!');
+            }
+        }
+
+        // Uygulamayı başlat
+        const app = new PhotoCaptureApp();
     </script>
 </body>
 </html>
