@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>İnek Burnu Fotoğraf Uygulaması</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .number-input {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .number-input label {
+            display: block;
+            font-size: 1.2rem;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .number-input input {
+            font-size: 2rem;
+            padding: 15px;
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            text-align: center;
+            width: 200px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .number-input input:focus {
+            outline: none;
+            border-color: #764ba2;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+        }
+
+        .camera-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        #videoElement {
+            width: 100%;
+            max-width: 600px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        #canvas {
+            display: none;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #ffeaa7, #fdcb6e);
+            color: #333;
+            box-shadow: 0 5px 15px rgba(253, 203, 110, 0.4);
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(253, 203, 110, 0.6);
+        }
+
+        .btn-success {
+            background: linear-gradient(45deg, #00b894, #00cec9);
+            color: white;
+            box-shadow: 0 5px 15px rgba(0, 184, 148, 0.4);
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 184, 148, 0.6);
+        }
+
+        .status {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .success {
+            color: #00b894;
+        }
+
+        .error {
+            color: #e17055;
+        }
+
+        .preview-container {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            margin: 20px 0;
+        }
+
+        .photo-count {
+            background: linear-gradient(45deg, #fd79a8, #fdcb6e);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            display: inline-block;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .number-input input {
+                width: 150px;
+                font-size: 1.5rem;
+            }
+            
+            button {
+                padding: 12px 20px;
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🐄 İnek Burnu Fotoğraf Uygulaması</h1>
+        <p>Tarih: <span id="currentDate"></span></p>
+    </div>
+
+    <div class="container">
+        <div class="number-input">
+            <label for="animalNumber">İnek Numarası:</label>
+            <input type="number" id="animalNumber" value="45" placeholder="Numara girin">
+        </div>
+
+        <div class="camera-container">
+            <video id="videoElement" autoplay playsinline></video>
+            <canvas id="canvas"></canvas>
+        </div>
+
+        <div class="controls">
+            <button id="startCamera" class="btn-primary">📷 Kamerayı Başlat</button>
+            <button id="capturePhoto" class="btn-success" disabled>📸 Fotoğraf Çek</button>
+            <button id="downloadPhoto" class="btn-secondary" style="display: none;">💾 İndir</button>
+        </div>
+
+        <div id="status" class="status"></div>
+
+        <div class="preview-container">
+            <img id="preview" class="preview-image" style="display: none;">
+            <div class="photo-count">
+                Çekilen Fotoğraf: <span id="photoCount">0</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let stream = null;
+        let photoCount = 0;
+        let currentPhotoBlob = null;
+
+        const videoElement = document.getElementById('videoElement');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const startCameraBtn = document.getElementById('startCamera');
+        const capturePhotoBtn = document.getElementById('capturePhoto');
+        const downloadPhotoBtn = document.getElementById('downloadPhoto');
+        const animalNumberInput = document.getElementById('animalNumber');
+        const statusDiv = document.getElementById('status');
+        const previewImg = document.getElementById('preview');
+        const photoCountSpan = document.getElementById('photoCount');
+
+        // Mevcut tarihi göster
+        document.getElementById('currentDate').textContent = new Date().toLocaleDateString('tr-TR');
+
+        startCameraBtn.addEventListener('click', startCamera);
+        capturePhotoBtn.addEventListener('click', capturePhoto);
+        downloadPhotoBtn.addEventListener('click', downloadPhoto);
+
+        async function startCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'environment',
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    } 
+                });
+                videoElement.srcObject = stream;
+                startCameraBtn.disabled = true;
+                capturePhotoBtn.disabled = false;
+                showStatus('Kamera başlatıldı! Fotoğraf çekmeye hazır.', 'success');
+            } catch (err) {
+                showStatus('Kamera erişim hatası: ' + err.message, 'error');
+                console.error('Kamera hatası:', err);
+            }
+        }
+
+        function capturePhoto() {
+            const animalNumber = animalNumberInput.value.trim();
+            
+            if (!animalNumber) {
+                showStatus('Lütfen bir inek numarası girin!', 'error');
+                return;
+            }
+
+            // Canvas boyutlarını video boyutlarına ayarla
+            canvas.width = videoElement.videoWidth;
+            canvas.height = videoElement.videoHeight;
+
+            // Video görüntüsünü canvas'a çiz
+            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+
+            // Sol üst köşeye numara ekle
+            addNumberOverlay(animalNumber);
+
+            // Canvas'ı blob'a çevir
+            canvas.toBlob((blob) => {
+                currentPhotoBlob = blob;
+                
+                // Önizleme göster
+                const url = URL.createObjectURL(blob);
+                previewImg.src = url;
+                previewImg.style.display = 'block';
+                downloadPhotoBtn.style.display = 'inline-block';
+                
+                // Fotoğraf sayısını artır
+                photoCount++;
+                photoCountSpan.textContent = photoCount;
+                
+                showStatus(`Fotoğraf çekildi! (Numara: ${animalNumber})`, 'success');
+            }, 'image/jpeg', 0.9);
+        }
+
+        function addNumberOverlay(number) {
+            // Font ayarları
+            const fontSize = Math.max(50, canvas.width / 20);
+            ctx.font = `bold ${fontSize}px Arial`;
+            ctx.fillStyle = 'white';
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 4;
+            
+            // Pozisyon ayarları (sol üst köşe)
+            const x = 30;
+            const y = fontSize + 20;
+            
+            // Metin çerçevesi için arka plan
+            const textMetrics = ctx.measureText(number);
+            const textWidth = textMetrics.width;
+            const textHeight = fontSize;
+            
+            // Arka plan çiz (yarı saydam)
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(x - 15, y - textHeight - 5, textWidth + 30, textHeight + 20);
+            
+            // Metin kenarlığı çiz
+            ctx.strokeText(number, x, y);
+            
+            // Ana metni çiz
+            ctx.fillStyle = 'white';
+            ctx.fillText(number, x, y);
+        }
+
+        function downloadPhoto() {
+            if (!currentPhotoBlob) {
+                showStatus('İndirilecek fotoğraf bulunamadı!', 'error');
+                return;
+            }
+
+            const animalNumber = animalNumberInput.value.trim();
+            const now = new Date();
+            const timestamp = now.toISOString().slice(0, 19).replace(/:/g, '-');
+            const filename = `inek_burun_${animalNumber}_${timestamp}.jpg`;
+
+            const url = URL.createObjectURL(currentPhotoBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showStatus(`Fotoğraf indirildi: ${filename}`, 'success');
+        }
+
+        function showStatus(message, type) {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+            
+            // 3 saniye sonra mesajı temizle
+            setTimeout(() => {
+                statusDiv.textContent = '';
+                statusDiv.className = 'status';
+            }, 3000);
+        }
+
+        // Sayfa yüklendiğinde inek numarasına odaklan
+        window.addEventListener('load', () => {
+            animalNumberInput.focus();
+        });
+
+        // Enter tuşu ile fotoğraf çekme
+        animalNumberInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !capturePhotoBtn.disabled) {
+                capturePhoto();
+            }
+        });
+    </script>
+</body>
+</html>
