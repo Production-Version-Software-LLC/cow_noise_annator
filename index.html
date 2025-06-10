@@ -578,27 +578,27 @@
             }
 
             addNumberToPhoto(number) {
-                // Metin özellikleri
-                const fontSize = this.canvas.width * 0.08; // Canvas genişliğine göre boyut
+                // Küçük metin özellikleri
+                const fontSize = this.canvas.width * 0.035; // Canvas genişliğinin %3.5'i (daha küçük)
                 this.ctx.font = `bold ${fontSize}px Arial`;
-                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
                 this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
-                this.ctx.lineWidth = fontSize * 0.1;
-                this.ctx.textAlign = 'center';
-                this.ctx.textBaseline = 'middle';
+                this.ctx.lineWidth = fontSize * 0.08;
+                this.ctx.textAlign = 'left'; // Sol hizalama
+                this.ctx.textBaseline = 'top'; // Üst hizalama
 
-                // Metin konumu (sağ üst köşe)
-                const x = this.canvas.width - (this.canvas.width * 0.15);
-                const y = this.canvas.height * 0.15;
+                // Sol üst köşe konumu
+                const x = this.canvas.width * 0.02; // Sol kenardan %2 içerde
+                const y = this.canvas.height * 0.02; // Üst kenardan %2 aşağıda
 
                 // Arkaplan dikdörtgeni
                 const textWidth = this.ctx.measureText(`#${number}`).width;
-                const padding = fontSize * 0.3;
+                const padding = fontSize * 0.4;
                 
-                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
                 this.ctx.fillRect(
-                    x - textWidth/2 - padding,
-                    y - fontSize/2 - padding,
+                    x - padding,
+                    y - padding,
                     textWidth + padding * 2,
                     fontSize + padding * 2
                 );
