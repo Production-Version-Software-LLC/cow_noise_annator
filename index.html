@@ -141,6 +141,17 @@
             transform: none !important;
         }
 
+        .quality-info {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            padding: 10px;
+            border-radius: 10px;
+            margin: 10px 0;
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
         .photos-section {
             margin-top: 40px;
         }
@@ -176,6 +187,13 @@
             height: 200px;
             object-fit: cover;
             display: block;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .photo-item img:hover {
+            transform: scale(1.05);
+            filter: brightness(1.1);
         }
 
         .photo-label {
@@ -341,20 +359,6 @@
             transform: scale(1.1);
         }
 
-        .photo-item img {
-            width: 100%;
-            height: 200px;
-            object-fit: cover;
-            display: block;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .photo-item img:hover {
-            transform: scale(1.05);
-            filter: brightness(1.1);
-        }
-
         @keyframes modalFadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
@@ -429,9 +433,12 @@
         
         <div class="camera-section">
             <video id="video" autoplay muted playsinline></video>
+            <div class="quality-info" id="qualityInfo" style="display: none;">
+                🎯 Yüksek Kalite Modu: <span id="resolutionText"></span>
+            </div>
             <div class="camera-controls">
                 <button id="startCamera" class="btn btn-primary">📷 Kamerayı Başlat</button>
-                <button id="captureBtn" class="btn btn-success" disabled>📸 Fotoğraf Çek</button>
+                <button id="captureBtn" class="btn btn-success" disabled>📸 Orijinal Kalite Fotoğraf</button>
                 <button id="resetBtn" class="btn btn-warning">🔄 Sıfırla</button>
             </div>
         </div>
@@ -470,6 +477,9 @@
                 this.maxPhotos = 6;
                 this.stream = null;
                 this.isRecording = false;
+                this.imageCapture = null;
+                this.track = null;
+                this.supportsImageCapture = false;
                 
                 this.initElements();
                 this.attachEventListeners();
@@ -488,6 +498,8 @@
                 this.flashEffect = document.getElementById('flashEffect');
                 this.successMessage = document.getElementById('successMessage');
                 this.animalNumberInput = document.getElementById('animalNumber');
+                this.qualityInfo = document.getElementById('qualityInfo');
+                this.resolutionText = document.getElementById('resolutionText');
                 
                 // Modal elementleri
                 this.photoModal = document.getElementById('photoModal');
@@ -518,95 +530,143 @@
 
             async startCamera() {
                 try {
-                    this.stream = await navigator.mediaDevices.getUserMedia({
+                    // Maksimum kalite için constraints
+                    const constraints = {
                         video: { 
-                            width: { ideal: 1280 },
-                            height: { ideal: 720 },
+                            width: { ideal: 4096, min: 1280 },
+                            height: { ideal: 2160, min: 720 },
                             facingMode: 'environment' // Arka kamera
                         },
                         audio: false
-                    });
+                    };
                     
+                    this.stream = await navigator.mediaDevices.getUserMedia(constraints);
                     this.video.srcObject = this.stream;
+                    
+                    // Video track'i al
+                    this.track = this.stream.getVideoTracks()[0];
+                    
+                    // ImageCapture API desteğini kontrol et
+                    if ('ImageCapture' in window && this.track) {
+                        try {
+                            this.imageCapture = new ImageCapture(this.track);
+                            this.supportsImageCapture = true;
+                            console.log('ImageCapture API destekleniyor - Maksimum kalite modu aktif');
+                            
+                            // Kamera yeteneklerini al
+                            const capabilities = await this.imageCapture.getPhotoCapabilities();
+                            console.log('Kamera yetenekleri:', capabilities);
+                            
+                        } catch (error) {
+                            console.log('ImageCapture başlatılamadı, canvas metoduna geçiliyor:', error);
+                            this.supportsImageCapture = false;
+                        }
+                    } else {
+                        console.log('ImageCapture API desteklenmiyor, canvas metodu kullanılıyor');
+                        this.supportsImageCapture = false;
+                    }
+                    
                     this.isRecording = true;
+                    
+                    // Video yüklendiğinde çözünürlük bilgisini göster
+                    this.video.addEventListener('loadedmetadata', () => {
+                        const resolution = `${this.video.videoWidth}x${this.video.videoHeight}`;
+                        this.resolutionText.textContent = resolution;
+                        this.qualityInfo.style.display = 'block';
+                        
+                        if (this.supportsImageCapture) {
+                            this.showSuccess(`✨ Maksimum kalite modu aktif! Video: ${resolution}`);
+                        } else {
+                            this.showSuccess(`📷 Kamera başlatıldı! Çözünürlük: ${resolution}`);
+                        }
+                    });
                     
                     this.startCameraBtn.disabled = true;
                     this.captureBtn.disabled = false;
                     
-                    this.showSuccess('Kamera başlatıldı! Fotoğraf çekmeye hazırsınız.');
                 } catch (error) {
                     console.error('Kamera erişim hatası:', error);
                     alert('Kameraya erişilemiyor. Lütfen tarayıcı izinlerini kontrol edin.');
                 }
             }
 
-            capturePhoto() {
+            async capturePhoto() {
                 if (!this.isRecording || this.photos.length >= this.maxPhotos) {
                     return;
                 }
 
-                const animalNumber = this.animalNumberInput.value || 'Numara Yok';
+                const animalNumber = this.animalNumberInput.value || 'Numara_Yok';
 
-                // Canvas boyutlarını video boyutlarına göre ayarla
-                this.canvas.width = this.video.videoWidth;
-                this.canvas.height = this.video.videoHeight;
+                try {
+                    let imageData;
+                    let photoBlob;
 
-                // Fotoğrafı çek
-                this.ctx.drawImage(this.video, 0, 0);
-                
-                // Numara yazısını fotoğrafın üzerine ekle
-                this.addNumberToPhoto(animalNumber);
-                
-                // Flash efekti
-                this.showFlash();
-                
-                // Base64 formatında resmi al
-                const imageData = this.canvas.toDataURL('image/jpeg', 0.9);
-                
-                // Fotoğrafı listeye ekle
-                this.photos.push({
-                    id: Date.now(),
-                    data: imageData,
-                    number: animalNumber,
-                    timestamp: new Date().toLocaleString('tr-TR')
-                });
-                
-                this.updatePhotosDisplay();
-                this.updateUI();
-                
-                this.showSuccess(`Fotoğraf çekildi! (${this.photos.length}/${this.maxPhotos})`);
+                    // Flash efekti
+                    this.showFlash();
+
+                    if (this.supportsImageCapture && this.imageCapture) {
+                        // Modern yöntem: ImageCapture API (Orijinal kalite)
+                        try {
+                            photoBlob = await this.imageCapture.takePhoto({
+                                imageWidth: 4096,
+                                imageHeight: 2160
+                            });
+                            
+                            // Blob'u base64'e çevir
+                            imageData = await this.blobToBase64(photoBlob);
+                            
+                            console.log('Orijinal kalite fotoğraf çekildi (ImageCapture API)');
+                            
+                        } catch (error) {
+                            console.log('ImageCapture.takePhoto hatası, canvas metoduna geçiliyor:', error);
+                            imageData = this.captureWithCanvas();
+                        }
+                    } else {
+                        // Fallback: Canvas metodu (Yüksek kalite)
+                        imageData = this.captureWithCanvas();
+                        console.log('Canvas metodu ile fotoğraf çekildi');
+                    }
+                    
+                    // Fotoğrafı listeye ekle
+                    this.photos.push({
+                        id: Date.now(),
+                        data: imageData,
+                        number: animalNumber,
+                        timestamp: new Date().toLocaleString('tr-TR'),
+                        method: this.supportsImageCapture ? 'ImageCapture' : 'Canvas'
+                    });
+                    
+                    this.updatePhotosDisplay();
+                    this.updateUI();
+                    
+                    const method = this.supportsImageCapture ? '✨ Orijinal kalite' : '📷 Yüksek kalite';
+                    this.showSuccess(`${method} fotoğraf çekildi! (${this.photos.length}/${this.maxPhotos})`);
+                    
+                } catch (error) {
+                    console.error('Fotoğraf çekme hatası:', error);
+                    this.showSuccess('❌ Fotoğraf çekilemedi, tekrar deneyin.');
+                }
             }
 
-            addNumberToPhoto(number) {
-                // Küçük metin özellikleri
-                const fontSize = this.canvas.width * 0.035; // Canvas genişliğinin %3.5'i (daha küçük)
-                this.ctx.font = `bold ${fontSize}px Arial`;
-                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-                this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
-                this.ctx.lineWidth = fontSize * 0.08;
-                this.ctx.textAlign = 'left'; // Sol hizalama
-                this.ctx.textBaseline = 'top'; // Üst hizalama
+            captureWithCanvas() {
+                // Canvas boyutlarını video boyutlarına göre ayarla
+                this.canvas.width = this.video.videoWidth || 1280;
+                this.canvas.height = this.video.videoHeight || 720;
 
-                // Sol üst köşe konumu
-                const x = this.canvas.width * 0.02; // Sol kenardan %2 içerde
-                const y = this.canvas.height * 0.02; // Üst kenardan %2 aşağıda
-
-                // Arkaplan dikdörtgeni
-                const textWidth = this.ctx.measureText(`#${number}`).width;
-                const padding = fontSize * 0.4;
+                // Fotoğrafı çek
+                this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
                 
-                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-                this.ctx.fillRect(
-                    x - padding,
-                    y - padding,
-                    textWidth + padding * 2,
-                    fontSize + padding * 2
-                );
+                // PNG formatında kayıpsız sıkıştırma
+                return this.canvas.toDataURL('image/png');
+            }
 
-                // Metin
-                this.ctx.fillStyle = 'white';
-                this.ctx.strokeText(`#${number}`, x, y);
-                this.ctx.fillText(`#${number}`, x, y);
+            async blobToBase64(blob) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                });
             }
 
             updatePhotosDisplay() {
@@ -616,9 +676,11 @@
                     const photoItem = document.createElement('div');
                     photoItem.className = 'photo-item';
                     
+                    const methodIcon = photo.method === 'ImageCapture' ? '✨' : '📷';
+                    
                     photoItem.innerHTML = `
-                        <img src="${photo.data}" alt="Fotoğraf ${index + 1}" onclick="app.openModal('${photo.data}', '${photo.number}', '${photo.timestamp}', ${index + 1})" title="Detayını görmek için tıklayın">
-                        <div class="photo-label">#${photo.number} - ${photo.timestamp}</div>
+                        <img src="${photo.data}" alt="Fotoğraf ${index + 1}" onclick="app.openModal('${photo.data}', '${photo.number}', '${photo.timestamp}', ${index + 1}, '${photo.method}')" title="Detayını görmek için tıklayın">
+                        <div class="photo-label">${methodIcon} #${photo.number} - ${photo.timestamp}</div>
                         <button class="delete-btn" onclick="app.deletePhoto(${photo.id})" title="Fotoğrafı Sil">
                             ✕
                         </button>
@@ -644,7 +706,8 @@
                     this.captureBtn.textContent = '📸 Maksimum Fotoğraf Sayısına Ulaşıldı';
                 } else {
                     this.captureBtn.disabled = !this.isRecording;
-                    this.captureBtn.textContent = '📸 Fotoğraf Çek';
+                    this.captureBtn.textContent = this.supportsImageCapture ? 
+                        '📸 Orijinal Kalite Fotoğraf' : '📸 Yüksek Kalite Fotoğraf';
                 }
                 
                 // İndirme butonu kontrolü
@@ -664,23 +727,24 @@
                 
                 setTimeout(() => {
                     this.successMessage.classList.remove('show');
-                }, 3000);
+                }, 4000);
             }
 
-            openModal(imageSrc, number, timestamp, photoIndex) {
+            openModal(imageSrc, number, timestamp, photoIndex, method) {
                 this.modalImage.src = imageSrc;
+                const methodText = method === 'ImageCapture' ? '✨ Orijinal Kalite' : '📷 Yüksek Kalite';
                 this.modalInfo.innerHTML = `
-                    <div>Fotoğraf #${photoIndex}</div>
+                    <div>Fotoğraf #${photoIndex} - ${methodText}</div>
                     <div>İnek Numarası: #${number}</div>
                     <div>Tarih: ${timestamp}</div>
                 `;
                 this.photoModal.classList.add('show');
-                document.body.style.overflow = 'hidden'; // Arka planın kaymasını engelle
+                document.body.style.overflow = 'hidden';
             }
 
             closeModal() {
                 this.photoModal.classList.remove('show');
-                document.body.style.overflow = 'auto'; // Scroll'u geri aç
+                document.body.style.overflow = 'auto';
             }
 
             async downloadPhotos() {
@@ -693,9 +757,11 @@
                     const folder = zip.folder('Inek_Burun_Fotograflari');
                     
                     this.photos.forEach((photo, index) => {
-                        // Base64 verisini temizle
-                        const base64Data = photo.data.replace(/^data:image\/jpeg;base64,/, '');
-                        const fileName = `${photo.number}_fotograf_${index + 1}.jpg`;
+                        // Base64 verisini temizle (PNG veya JPEG olabilir)
+                        const base64Data = photo.data.replace(/^data:image\/(png|jpeg);base64,/, '');
+                        const extension = photo.data.includes('data:image/png') ? 'png' : 'jpg';
+                        const methodPrefix = photo.method === 'ImageCapture' ? 'OrijinalKalite' : 'YuksekKalite';
+                        const fileName = `${methodPrefix}_${photo.number}_fotograf_${index + 1}.${extension}`;
                         folder.file(fileName, base64Data, { base64: true });
                     });
                     
@@ -712,7 +778,7 @@
                     document.body.removeChild(link);
                     URL.revokeObjectURL(url);
                     
-                    this.showSuccess('Fotoğraflar başarıyla indirildi!');
+                    this.showSuccess('✅ Fotoğraflar başarıyla indirildi!');
                 } catch (error) {
                     console.error('İndirme hatası:', error);
                     alert('Fotoğraflar indirilemedi. Lütfen tekrar deneyin.');
@@ -729,20 +795,24 @@
                 // Değişkenleri sıfırla
                 this.photos = [];
                 this.isRecording = false;
+                this.imageCapture = null;
+                this.track = null;
+                this.supportsImageCapture = false;
                 
                 // UI'ı sıfırla
                 this.video.srcObject = null;
                 this.photosGrid.innerHTML = '';
                 this.photoCount.textContent = '0';
                 this.animalNumberInput.value = '';
+                this.qualityInfo.style.display = 'none';
                 
                 // Butonları sıfırla
                 this.startCameraBtn.disabled = false;
                 this.captureBtn.disabled = true;
-                this.captureBtn.textContent = '📸 Fotoğraf Çek';
+                this.captureBtn.textContent = '📸 Orijinal Kalite Fotoğraf';
                 this.downloadBtn.disabled = true;
                 
-                this.showSuccess('Uygulama sıfırlandı!');
+                this.showSuccess('🔄 Uygulama sıfırlandı!');
             }
         }
 
